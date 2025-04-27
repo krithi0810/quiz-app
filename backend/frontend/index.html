@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz App - Login</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1e1e2f, #3b1e5e, #6b48ff);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            color: #fff;
+        }
+
+        .container {
+            background: rgba(30, 30, 47, 0.9);
+            border-radius: 15px;
+            padding: 30px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border: 2px solid #7c4dff;
+        }
+
+        h1 {
+            color: #fff;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2em;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #fff;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid transparent;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            font-size: 1em;
+            transition: all 0.3s ease;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #7c4dff;
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background: #7c4dff;
+            color: #fff;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+
+        button:hover {
+            background: #6b48ff;
+            transform: translateY(-2px);
+        }
+
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .toggle-form {
+            text-align: center;
+            margin-top: 20px;
+            color: #fff;
+        }
+
+        .toggle-form a {
+            color: #7c4dff;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .toggle-form a:hover {
+            text-decoration: underline;
+        }
+
+        .message {
+            margin: 15px 0;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        .error {
+            background: rgba(255, 0, 0, 0.2);
+            color: #ff4444;
+        }
+
+        .success {
+            background: rgba(0, 255, 0, 0.2);
+            color: #00ff00;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Quiz App</h1>
+        <form id="authForm" onsubmit="handleSubmit(event)">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" required minlength="3" 
+                    pattern="[a-zA-Z0-9_]+" title="Username can only contain letters, numbers, and underscores">
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required minlength="6">
+            </div>
+            <button type="submit" id="submitBtn">Login</button>
+        </form>
+        <div class="toggle-form">
+            <span>Don't have an account? </span>
+            <a onclick="toggleForm()">Register</a>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000';
+        let isLoginMode = true;
+
+        function toggleForm() {
+            isLoginMode = !isLoginMode;
+            const form = document.getElementById('authForm');
+            const submitBtn = document.getElementById('submitBtn');
+            const toggleText = document.querySelector('.toggle-form span');
+            const toggleLink = document.querySelector('.toggle-form a');
+
+            submitBtn.textContent = isLoginMode ? 'Login' : 'Register';
+            toggleText.textContent = isLoginMode ? "Don't have an account? " : 'Already have an account? ';
+            toggleLink.textContent = isLoginMode ? 'Register' : 'Login';
+
+            // Clear form and messages
+            form.reset();
+            clearMessages();
+        }
+
+        async function handleSubmit(event) {
+            event.preventDefault();
+            clearMessages();
+
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+
+            // Validate input
+            if (username.length < 3) {
+                showMessage('Username must be at least 3 characters long', 'error');
+                return;
+            }
+            if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+                showMessage('Username can only contain letters, numbers, and underscores', 'error');
+                return;
+            }
+            if (password.length < 6) {
+                showMessage('Password must be at least 6 characters long', 'error');
+                return;
+            }
+
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+
+            try {
+                const endpoint = isLoginMode ? 'login' : 'register';
+                const response = await fetch(`${API_URL}/api/auth/${endpoint}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    if (isLoginMode) {
+                        // Store user data and redirect
+                        localStorage.setItem('userId', data.userId);
+                        localStorage.setItem('username', username);
+                        showMessage('Login successful! Redirecting...', 'success');
+                        setTimeout(() => {
+                            window.location.href = 'quiz.html';
+                        }, 1500);
+                    } else {
+                        showMessage('Registration successful! Please log in.', 'success');
+                        setTimeout(() => {
+                            toggleForm();
+                        }, 1500);
+                    }
+                } else {
+                    showMessage(data.message || 'Authentication failed', 'error');
+                }
+            } catch (error) {
+                console.error('Auth error:', error);
+                showMessage('Server error. Please try again later.', 'error');
+            } finally {
+                submitBtn.disabled = false;
+            }
+        }
+
+        function showMessage(text, type) {
+            clearMessages();
+            const message = document.createElement('div');
+            message.className = `message ${type}`;
+            message.textContent = text;
+            document.querySelector('.container').insertBefore(
+                message,
+                document.querySelector('form')
+            );
+        }
+
+        function clearMessages() {
+            const messages = document.querySelectorAll('.message');
+            messages.forEach(message => message.remove());
+        }
+
+        // Handle Enter key
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && e.target.tagName !== 'BUTTON') {
+                document.getElementById('submitBtn').click();
+            }
+        });
+
+        // Clear stored data on load
+        window.addEventListener('load', function() {
+            localStorage.removeItem('userId');
+            localStorage.removeItem('username');
+        });
+    </script>
+</body>
+</html>
